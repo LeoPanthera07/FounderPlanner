@@ -50,6 +50,8 @@ Every task belongs to one of four buckets:
 ---
 
 ## 📁 Project Structure
+
+```
 src/
 ├── app/
 │ ├── layout/ # AppShell, Sidebar, TopBar
@@ -76,7 +78,7 @@ src/
 ├── carryForward.js# Shutdown decision logic
 ├── streakUtils.js # Habit streak calculations
 └── exportUtils.js # JSON export/import
-
+```
 
 ---
 
