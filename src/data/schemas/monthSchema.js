@@ -1,0 +1,46 @@
+export const monthSchema = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  projects: [
+    { name: '', q1: '', q2: '', q3: '', q4: '' },
+    { name: '', q1: '', q2: '', q3: '', q4: '' },
+    { name: '', q1: '', q2: '', q3: '', q4: '' },
+  ],
+  habitFloor: [
+    { habit: 'Sleep',     minimum: '7+ hours / 10pm lights out', trackVia: 'Sleep score' },
+    { habit: 'Movement',  minimum: '20-min walk or workout',     trackVia: 'Streak' },
+    { habit: 'Deep work', minimum: '1 × 90-min block',           trackVia: 'Hours logged' },
+  ],
+  scoreboard: [
+    { metric: 'Deep work hours',          weeklyTarget: '10h',  monthlyTarget: '40h',  trackMethod: 'Time tracker' },
+    { metric: 'Shipped features / tasks', weeklyTarget: '3',    monthlyTarget: '12',   trackMethod: 'GitHub / board' },
+    { metric: 'Job applications',         weeklyTarget: '5',    monthlyTarget: '20',   trackMethod: 'Spreadsheet' },
+    { metric: 'Workouts',                 weeklyTarget: '4',    monthlyTarget: '16',   trackMethod: 'Log' },
+    { metric: 'Avg sleep score',          weeklyTarget: '80+',  monthlyTarget: '80+',  trackMethod: 'App' },
+    { metric: 'Savings / income',         weeklyTarget: '',     monthlyTarget: '',     trackMethod: 'Bank statement' },
+  ],
+  bottleneck: '',
+  monthlyFocus: [
+    { bucket: 'Build',   outcome: '', owner: '', deadline: '', doneLooksLike: '' },
+    { bucket: 'Learn',   outcome: '', owner: '', deadline: '', doneLooksLike: '' },
+    { bucket: 'Live',    outcome: '', owner: '', deadline: '', doneLooksLike: '' },
+    { bucket: 'Admin',   outcome: '', owner: '', deadline: '', doneLooksLike: '' },
+  ],
+  lifeAdmin: [
+    { type: 'Travel',                  detail: '', date: '', status: '' },
+    { type: 'Purchase / renewal',      detail: '', date: '', status: '' },
+    { type: 'Financial deadline',      detail: '', date: '', status: '' },
+    { type: 'Family / social',         detail: '', date: '', status: '' },
+    { type: 'Health appointment',      detail: '', date: '', status: '' },
+    { type: 'Monthly reward',          detail: '', date: '', status: '' },
+  ],
+  monthlyAdventure: '',
+  milestones: [
+    { week: 'Week 1', milestone: '', risk: '', prevention: '', checkpoint: '' },
+    { week: 'Week 2', milestone: '', risk: '', prevention: '', checkpoint: '' },
+    { week: 'Week 3', milestone: '', risk: '', prevention: '', checkpoint: '' },
+    { week: 'Week 4', milestone: '', risk: '', prevention: '', checkpoint: '' },
+  ],
+  stopStartContinue: { stop: ['', '', ''], start: ['', '', ''], continue: ['', '', ''] },
+  review: { momentum: '', lowValue: '', lesson: '', leverage: '', constraint: '', nextPriority: '' },
+};

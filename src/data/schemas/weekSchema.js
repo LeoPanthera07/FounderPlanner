@@ -1,0 +1,36 @@
+export const weekSchema = {
+  year: new Date().getFullYear(),
+  week: 1,
+  weeklyWin: '',
+  priorities: [
+    { bucket: 'Build',        priority: '', doneLooksLike: '', timeNeeded: '' },
+    { bucket: 'Learn',        priority: '', doneLooksLike: '', timeNeeded: '' },
+    { bucket: 'Operate/Live', priority: '', doneLooksLike: '', timeNeeded: '' },
+  ],
+  dayThemes: [
+    { day: 'Monday',    theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Tuesday',   theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Wednesday', theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Thursday',  theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Friday',    theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Saturday',  theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+    { day: 'Sunday',    theme: '', keyBlock: '', secondaryBlock: '', nonNegotiable: '' },
+  ],
+  scorecard: {
+    deepWorkHours: { target: 10,  mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+    workouts:      { target: 4,   mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+    sleepScore:    { target: 80,  mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+    outreach:      { target: 5,   mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+    shippedOutput: { target: 1,   mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+    meaningfulConvos: { target: 3,mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' },
+  },
+  deepWorkBlocks: [
+    { block: 'DW Block 1', dayTime: '', task: '', outcome: '', distraction: '' },
+    { block: 'DW Block 2', dayTime: '', task: '', outcome: '', distraction: '' },
+    { block: 'DW Block 3', dayTime: '', task: '', outcome: '', distraction: '' },
+    { block: 'Learning',   dayTime: '', task: '', outcome: '', distraction: '' },
+    { block: 'Buffer',     dayTime: '', task: '', outcome: '', distraction: '' },
+  ],
+  meetings: [],
+  review: { weeklyWin: '', antiDrift: '', carryForward: '' },
+};
