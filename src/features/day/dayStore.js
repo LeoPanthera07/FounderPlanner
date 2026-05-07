@@ -39,22 +39,6 @@ export const useDayStore = create((set, get) => ({
     set({ dayData: { ...dayData, focusLadder } });
   },
 
-  toggleRoutine: async (index) => {
-    const { dayData } = get();
-    const routines = [...dayData.routines];
-    routines[index] = { ...routines[index], done: !routines[index].done };
-    await db.dayData.update(dayData.id, { routines });
-    set({ dayData: { ...dayData, routines } });
-  },
-
-  updateRoutine: async (index, key, value) => {
-    const { dayData } = get();
-    const routines = [...dayData.routines];
-    routines[index] = { ...routines[index], [key]: value };
-    await db.dayData.update(dayData.id, { routines });
-    set({ dayData: { ...dayData, routines } });
-  },
-
   updateReflection: async (key, value) => {
     const { dayData } = get();
     const reflection = { ...dayData.reflection, [key]: value };
@@ -62,12 +46,10 @@ export const useDayStore = create((set, get) => ({
     set({ dayData: { ...dayData, reflection } });
   },
 
-  updateScheduleSlot: async (index, key, value) => {
+  updateSchedule: async (blocks) => {
     const { dayData } = get();
-    const schedule = [...dayData.schedule];
-    schedule[index] = { ...schedule[index], [key]: value };
-    await db.dayData.update(dayData.id, { schedule });
-    set({ dayData: { ...dayData, schedule } });
+    await db.dayData.update(dayData.id, { schedule: blocks });
+    set({ dayData: { ...dayData, schedule: blocks } });
   },
 
   addShutdownItem: async (item) => {
