@@ -1,65 +1,45 @@
 import { NavLink } from 'react-router-dom';
 
 const NAV = [
-  { to: '/year',    icon: '🎯', label: 'Year',    sub: 'Vision & Themes'    },
-  { to: '/month',   icon: '📅', label: 'Month',   sub: 'Projects & Systems' },
-  { to: '/week',    icon: '📋', label: 'Week',    sub: 'Execution Map'      },
-  { to: '/day',     icon: '⚡', label: 'Day',     sub: 'Command & Routines' },
-  { to: '/habits',  icon: '🔥', label: 'Habits',  sub: 'Daily Streaks'      },
-  { to: '/metrics', icon: '📊', label: 'Metrics', sub: 'Scoreboard'         },
-  { to: '/reviews', icon: '🔄', label: 'Reviews', sub: 'Retrospectives'     },
+  { to:'/year',    icon:'🎯', label:'Year'    },
+  { to:'/month',   icon:'📅', label:'Month'   },
+  { to:'/week',    icon:'📋', label:'Week'    },
+  { to:'/day',     icon:'⚡', label:'Day'     },
+  { to:'/habits',  icon:'🔥', label:'Habits'  },
+  { to:'/metrics', icon:'📊', label:'Metrics' },
+  { to:'/reviews', icon:'🔄', label:'Reviews' },
 ];
 
 export const Sidebar = ({ open, onClose }) => (
   <>
-    {open && (
-      <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={onClose} />
-    )}
-    <aside className={`
-      fixed top-0 left-0 h-full w-64 bg-[#1e3a5f] z-30 flex flex-col
-      transform transition-transform duration-300
-      ${open ? 'translate-x-0' : '-translate-x-full'}
-      lg:translate-x-0 lg:static lg:z-auto
-    `}>
-      <div className="px-5 py-6 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-white font-bold text-lg leading-tight">Founder Planner</h1>
-            <p className="text-slate-400 text-xs mt-0.5">Build · Learn · Operate · Live</p>
-          </div>
-          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white text-xl">✕</button>
-        </div>
+    {open && <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:20 }} onClick={onClose} />}
+    <aside style={{
+      position: window.innerWidth >= 1024 ? 'sticky' : 'fixed',
+      top: 0, left: 0, height: '100vh', width: 200,
+      background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)',
+      display: 'flex', flexDirection: 'column', zIndex: 30, flexShrink: 0,
+      transform: open || window.innerWidth >= 1024 ? 'translateX(0)' : 'translateX(-100%)',
+      transition: 'transform 0.25s ease',
+    }}>
+      <div style={{ padding:'16px 14px 14px', borderBottom:'1px solid var(--border-subtle)' }}>
+        <p style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>Founder Planner</p>
+        <p style={{ fontSize:11, color:'var(--text-disabled)', marginTop:2 }}>
+          {new Date().getFullYear()}
+        </p>
       </div>
-
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-        {NAV.map(({ to, icon, label, sub }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onClose}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
-               ${isActive
-                 ? 'bg-white/15 text-white'
-                 : 'text-slate-300 hover:text-white hover:bg-white/10'}`
-            }
-          >
-            <span className="text-xl flex-shrink-0">{icon}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight">{label}</p>
-              <p className="text-xs text-slate-400 leading-tight truncate">{sub}</p>
-            </div>
+      <nav style={{ flex:1, padding:'8px 8px', display:'flex', flexDirection:'column', gap:2, overflowY:'auto' }}>
+        {NAV.map(({ to, icon, label }) => (
+          <NavLink key={to} to={to} onClick={onClose}
+            className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+            <span style={{ fontSize:15, width:18, textAlign:'center', flexShrink:0 }}>{icon}</span>
+            <span>{label}</span>
           </NavLink>
         ))}
       </nav>
-
-      <div className="px-5 py-4 border-t border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">F</div>
-          <div>
-            <p className="text-white text-xs font-semibold">Founder Mode</p>
-            <p className="text-slate-400 text-xs">{new Date().getFullYear()}</p>
-          </div>
+      <div style={{ padding:'12px 14px', borderTop:'1px solid var(--border-subtle)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:24, height:24, borderRadius:6, background:'var(--accent-blue-bg)', border:'1px solid rgba(79,142,247,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--accent-blue)' }}>F</div>
+          <span style={{ fontSize:11, color:'var(--text-disabled)' }}>Founder Mode</span>
         </div>
       </div>
     </aside>

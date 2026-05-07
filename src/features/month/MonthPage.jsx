@@ -1,159 +1,148 @@
 import { useEffect, useState } from 'react';
 import { useMonthStore } from './monthStore';
-import { PlannerCard } from '../../components/cards/PlannerCard';
-import { getBucketColor, BUCKETS } from '../../utils/bucketUtils';
+import { AutoTextarea, FpInput } from '../../components/forms/Auto';
+import { ChipList } from '../../components/forms/ChipList';
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const STATUS_COLORS = {
-  Active:  'bg-blue-100 text-blue-700',
-  Done:    'bg-green-100 text-green-700',
-  Paused:  'bg-amber-100 text-amber-700',
-  Dropped: 'bg-red-100 text-red-600',
-};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const BUCKET_TAG={ Build:'tag-blue', Learn:'tag-green', Operate:'tag-amber', Live:'tag-pink' };
+const STATUS_TAG ={ Active:'tag-blue', Done:'tag-green', Paused:'tag-amber', Dropped:'tag-slate' };
+const EP={ name:'', bucket:'Build', status:'Active', milestone:'' };
+const EM={ metric:'', target:'', current:'' };
+const toChips = v => Array.isArray(v) ? v : (v ? v.split('\n').filter(Boolean) : []);
 
-const Input = ({ value, onChange, placeholder }) => (
-  <input value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-    className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 bg-white" />
+const Section=({title,hint,children,action})=>(
+  <div className="card">
+    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
+      <div><p className="section-title">{title}</p>{hint&&<p className="helper-text" style={{marginTop:4}}>{hint}</p>}</div>
+      {action&&<div>{action}</div>}
+    </div>
+    {children}
+  </div>
 );
-
-const Textarea = ({ value, onChange, placeholder, rows = 3 }) => (
-  <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white resize-none" />
+const Field=({label,children})=>(
+  <div><label className="field-label">{label}</label>{children}</div>
 );
 
 export const MonthPage = () => {
-  const now = new Date();
-  const [year, setYear]   = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const now=new Date();
+  const [year,setYear]=useState(now.getFullYear());
+  const [month,setMonth]=useState(now.getMonth()+1);
+  const { monthData,loading,loadMonth,updateField,updateProject,updateScorecard,updateReview }=useMonthStore();
+  useEffect(()=>{ loadMonth(year,month); },[year,month]);
 
-  const { monthData, loading, loadMonth, updateField, updateProject, updateScorecard, updateReview } = useMonthStore();
+  const d=monthData ? {
+    ...monthData,
+    projects:  Array.isArray(monthData.projects)  ? monthData.projects  : [{...EP}],
+    scorecard: Array.isArray(monthData.scorecard) ? monthData.scorecard : [{...EM}],
+    review:    monthData.review||{win:'',lesson:'',nextFocus:''},
+  } : null;
 
-  useEffect(() => { loadMonth(year, month); }, [year, month]);
+  const nav=delta=>{ const nd=new Date(year,month-1+delta); setYear(nd.getFullYear()); setMonth(nd.getMonth()+1); };
 
-  if (loading || !monthData) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full" />
-    </div>
-  );
+  if(loading||!d) return <Spinner />;
+
+  const focusChips  = toChips(d.monthlyFocus);
+  const driftChips  = toChips(d.antiDrift);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div style={{ maxWidth:760, margin:'0 auto', display:'flex', flexDirection:'column', gap:24 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">{MONTHS[month - 1]} {year}</h1>
-          <p className="text-sm text-slate-400">Projects · Scorecard · Focus</p>
+          <h1 className="page-title">{MONTHS[month-1]} {year}</h1>
+          <p className="page-subtitle">Month Plan · Projects & Focus</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { const d = new Date(year, month - 2); setYear(d.getFullYear()); setMonth(d.getMonth() + 1); }}
-            className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 transition">← Prev</button>
-          <button onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth() + 1); }}
-            className="px-3 py-1.5 text-xs bg-[#1e3a5f] text-white rounded-lg hover:bg-[#16304f] transition">This Month</button>
-          <button onClick={() => { const d = new Date(year, month); setYear(d.getFullYear()); setMonth(d.getMonth() + 1); }}
-            className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 transition">Next →</button>
+        <div style={{ display:'flex', gap:6 }}>
+          <button className="btn" onClick={()=>nav(-1)}>←</button>
+          <button className="btn" onClick={()=>{ setYear(now.getFullYear()); setMonth(now.getMonth()+1); }}>Now</button>
+          <button className="btn" onClick={()=>nav(1)}>→</button>
         </div>
       </div>
 
-      {/* Monthly Win */}
-      <PlannerCard title="Monthly Win" subtitle="The one result that would make this month count">
-        <Textarea value={monthData.monthlyWin} onChange={v => updateField('monthlyWin', v)}
-          placeholder="This month wins if..." rows={2} />
-      </PlannerCard>
+      <Section title="Monthly Win" hint="This month succeeds if...">
+        <AutoTextarea value={d.monthlyWin} onChange={v=>updateField('monthlyWin',v)}
+          placeholder="The one result that makes this month count..." minRows={2} />
+      </Section>
 
-      {/* Projects */}
-      <PlannerCard title="Project Portfolio" subtitle="Active projects this month">
-        <div className="flex flex-col gap-2">
-          {monthData.projects.map((p, i) => {
-            const c = getBucketColor(p.bucket);
+      <Section title="Projects" hint="Active projects this month"
+        action={<button className="btn btn-primary" onClick={()=>updateField('projects',[...d.projects,{...EP}])}>+ Project</button>}>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {d.projects.map((p,i)=>{
+            const bc=BUCKET_TAG[p.bucket]||'tag-slate';
+            const sc=STATUS_TAG[p.status]||'tag-slate';
             return (
-              <div key={i} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div className="md:col-span-2">
-                  <label className="text-xs text-slate-400 font-semibold block mb-1">Project</label>
-                  <Input value={p.name} onChange={v => updateProject(i, 'name', v)} placeholder="Project name" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 font-semibold block mb-1">Bucket</label>
-                  <select value={p.bucket} onChange={e => updateProject(i, 'bucket', e.target.value)}
-                    className={`w-full px-2 py-1.5 text-xs rounded-lg border-0 font-semibold focus:outline-none ${c.bg} ${c.text}`}>
-                    {BUCKETS.map(b => <option key={b}>{b}</option>)}
+              <div key={i} className="card-inner" style={{ padding:'12px 14px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <input value={p.name} onChange={e=>updateProject(i,'name',e.target.value)}
+                    placeholder="Project name"
+                    style={{ flex:1, background:'transparent', border:'none', outline:'none',
+                      color:'var(--text-primary)', fontSize:13, fontWeight:500 }} />
+                  <select value={p.bucket} onChange={e=>updateProject(i,'bucket',e.target.value)}
+                    className={`tag ${bc}`} style={{ border:'none', outline:'none', cursor:'pointer', fontWeight:600, fontSize:11, appearance:'none' }}>
+                    {['Build','Learn','Operate','Live'].map(b=><option key={b}>{b}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 font-semibold block mb-1">Status</label>
-                  <select value={p.status} onChange={e => updateProject(i, 'status', e.target.value)}
-                    className={`w-full px-2 py-1.5 text-xs rounded-lg border-0 font-semibold focus:outline-none ${STATUS_COLORS[p.status] || 'bg-slate-100 text-slate-600'}`}>
-                    {Object.keys(STATUS_COLORS).map(s => <option key={s}>{s}</option>)}
+                  <select value={p.status} onChange={e=>updateProject(i,'status',e.target.value)}
+                    className={`tag ${sc}`} style={{ border:'none', outline:'none', cursor:'pointer', fontWeight:600, fontSize:11, appearance:'none' }}>
+                    {['Active','Done','Paused','Dropped'].map(s=><option key={s}>{s}</option>)}
                   </select>
+                  <button className="btn-remove" onClick={()=>updateField('projects',d.projects.filter((_,j)=>j!==i))}>×</button>
                 </div>
-                <div>
-                  <label className="text-xs text-slate-400 font-semibold block mb-1">Milestone</label>
-                  <Input value={p.milestone} onChange={v => updateProject(i, 'milestone', v)} placeholder="This month's milestone" />
-                </div>
+                <input value={p.milestone||''} onChange={e=>updateProject(i,'milestone',e.target.value)}
+                  placeholder="This month's milestone..."
+                  style={{ width:'100%', background:'transparent', border:'none',
+                    borderTop:'1px solid var(--border-subtle)', outline:'none',
+                    color:'var(--text-secondary)', fontSize:12, paddingTop:8 }} />
               </div>
             );
           })}
-          <button onClick={() => updateField('projects', [...monthData.projects, { name: '', bucket: 'Build', status: 'Active', milestone: '', blockers: '' }])}
-            className="text-xs text-slate-400 hover:text-blue-500 font-semibold transition py-1">
-            + Add project
-          </button>
+          <button className="btn-add" onClick={()=>updateField('projects',[...d.projects,{...EP}])}>+ Add project</button>
         </div>
-      </PlannerCard>
+      </Section>
 
-      {/* Scorecard */}
-      <PlannerCard title="Monthly Scorecard" subtitle="3–5 metrics to track this month">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="bg-[#1e3a5f] text-white">
-                {['Metric', 'Target', 'Current', 'Status'].map(h => (
-                  <th key={h} className="text-left px-3 py-2 font-semibold">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {monthData.scorecard.map((s, i) => (
-                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                  {['metric','target','current','status'].map(f => (
-                    <td key={f} className="px-1 py-1">
-                      <Input value={s[f]} onChange={v => updateScorecard(i, f, v)} placeholder={f.charAt(0).toUpperCase() + f.slice(1)} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </PlannerCard>
-
-      {/* Focus + Anti-drift */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PlannerCard title="Monthly Focus" subtitle="The single most important thing">
-          <Textarea value={monthData.monthlyFocus} onChange={v => updateField('monthlyFocus', v)}
-            placeholder="This month I'm focusing on..." />
-        </PlannerCard>
-        <PlannerCard title="Anti-Drift Check" subtitle="What to say no to this month">
-          <Textarea value={monthData.antiDrift} onChange={v => updateField('antiDrift', v)}
-            placeholder="Not this month: no new projects, no social media scrolling..." />
-        </PlannerCard>
-      </div>
-
-      {/* Monthly Review */}
-      <PlannerCard title="Monthly Review" headerColor="bg-[#2a9d8f]" subtitle="Fill at end of month">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {[
-            { key: 'win',       label: 'Win',         placeholder: 'Biggest win this month...'       },
-            { key: 'lesson',    label: 'Lesson',      placeholder: 'Most important lesson...'         },
-            { key: 'nextFocus', label: 'Next Focus',  placeholder: 'Top priority for next month...'   },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <label className="text-xs text-slate-500 font-semibold block mb-1">{label}</label>
-              <Textarea value={monthData.review?.[key]} onChange={v => updateReview(key, v)} placeholder={placeholder} rows={3} />
+      <Section title="Scorecard" hint="Metrics to track this month"
+        action={<button className="btn btn-primary" onClick={()=>updateField('scorecard',[...d.scorecard,{...EM}])}>+ Metric</button>}>
+        <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 110px 110px 36px', gap:8 }}>
+            {['Metric','Target','Current',''].map(h=>(
+              <span key={h} className="field-label" style={{ paddingLeft:4 }}>{h}</span>
+            ))}
+          </div>
+          {d.scorecard.map((s,i)=>(
+            <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 110px 110px 36px', gap:8, alignItems:'center' }}>
+              <FpInput value={s.metric}  onChange={v=>updateScorecard(i,'metric',v)}  placeholder="Metric name" />
+              <FpInput value={s.target}  onChange={v=>updateScorecard(i,'target',v)}  placeholder="Target" />
+              <FpInput value={s.current} onChange={v=>updateScorecard(i,'current',v)} placeholder="Current" />
+              <button className="btn-remove" onClick={()=>updateField('scorecard',d.scorecard.filter((_,j)=>j!==i))}>×</button>
             </div>
           ))}
+          <button className="btn-add" onClick={()=>updateField('scorecard',[...d.scorecard,{...EM}])}>+ Add metric</button>
         </div>
-      </PlannerCard>
+      </Section>
 
+      {/* Focus + Anti-drift as chip lists */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Section title="Monthly Focus" hint="Type focus items and press Enter">
+          <ChipList items={focusChips} onChange={v=>updateField('monthlyFocus',v)} placeholder="Focus item..." />
+        </Section>
+        <Section title="Anti-Drift" hint="What to say no to — press Enter to add">
+          <ChipList items={driftChips} onChange={v=>updateField('antiDrift',v)} placeholder="Not this month..." />
+        </Section>
+      </div>
+
+      <Section title="Monthly Review" hint="Fill at end of month">
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {[{k:'win',l:'Win',p:'Biggest win...'},{k:'lesson',l:'Lesson',p:'Key lesson...'},{k:'nextFocus',l:'Next Month Focus',p:'Top priority...'}].map(({k,l,p})=>(
+            <Field key={k} label={l}>
+              <AutoTextarea value={d.review?.[k]} onChange={v=>updateReview(k,v)} placeholder={p} minRows={2} />
+            </Field>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 };
+
+const Spinner=()=>(
+  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200 }}>
+    <div style={{ width:24, height:24, border:'2px solid var(--border-strong)', borderTopColor:'var(--accent-blue)', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+  </div>
+);

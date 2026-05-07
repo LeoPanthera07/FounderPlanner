@@ -1,11 +1,14 @@
-export const PlannerCard = ({ title, subtitle, children, className = '', headerColor = 'bg-[#1e3a5f]' }) => (
-  <div className={`rounded-xl border border-slate-200 shadow-sm overflow-hidden ${className}`}>
-    {title && (
-      <div className={`${headerColor} px-4 py-3`}>
-        <h3 className="text-sm font-semibold text-white tracking-wide">{title}</h3>
-        {subtitle && <p className="text-xs text-slate-300 mt-0.5">{subtitle}</p>}
+export const PlannerCard = ({ title, subtitle, children, className = '', action }) => (
+  <div className={`card ${className}`}>
+    {(title || action) && (
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+        <div>
+          {title    && <p className="section-title">{title}</p>}
+          {subtitle && <p className="helper-text" style={{ marginTop:3 }}>{subtitle}</p>}
+        </div>
+        {action && <div style={{ flexShrink:0 }}>{action}</div>}
       </div>
     )}
-    <div className="p-4 bg-white">{children}</div>
+    {children}
   </div>
 );

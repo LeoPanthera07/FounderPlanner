@@ -3,17 +3,8 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      colors: {
-        brand: {
-          navy:  '#1e3a5f',
-          teal:  '#2a9d8f',
-          amber: '#e9c46a',
-          coral: '#e76f51',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-      },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      animation: { spin: 'spin 0.7s linear infinite' },
     },
   },
   plugins: [],

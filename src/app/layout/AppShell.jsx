@@ -4,13 +4,13 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
 export const AppShell = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto">
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg-base)' }}>
+      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, overflow:'hidden' }}>
+        <TopBar onMenuClick={() => setOpen(true)} />
+        <main style={{ flex:1, overflowY:'auto', padding:'28px 32px' }}>
           <Outlet />
         </main>
       </div>

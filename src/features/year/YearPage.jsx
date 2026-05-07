@@ -1,135 +1,152 @@
 import { useEffect } from 'react';
 import { useYearStore } from './yearStore';
-import { PlannerCard } from '../../components/cards/PlannerCard';
-import { getBucketColor } from '../../utils/bucketUtils';
+import { AutoTextarea, FpInput } from '../../components/forms/Auto';
+import { ChipList } from '../../components/forms/ChipList';
 
-const BUCKETS = ['build', 'learn', 'operate', 'live'];
-const BUCKET_LABELS = { build: 'Build', learn: 'Learn', operate: 'Operate', live: 'Live' };
-
-const DEFAULT_TARGETS = {
-  build:   { goal: '', metric: '', by: '' },
-  learn:   { goal: '', metric: '', by: '' },
-  operate: { goal: '', metric: '', by: '' },
-  live:    { goal: '', metric: '', by: '' },
+const BUCKET_CONFIG = {
+  build:   { label:'Build',   tagClass:'tag-blue',   dot:'var(--accent-blue)'  },
+  learn:   { label:'Learn',   tagClass:'tag-green',  dot:'var(--accent-green)' },
+  operate: { label:'Operate', tagClass:'tag-amber',  dot:'var(--accent-amber)' },
+  live:    { label:'Live',    tagClass:'tag-pink',   dot:'var(--accent-pink)'  },
 };
 
-const DEFAULT_THEMES = [
-  { theme: '', why: '', lookLike: '', notThisYear: '' },
-  { theme: '', why: '', lookLike: '', notThisYear: '' },
-  { theme: '', why: '', lookLike: '', notThisYear: '' },
-];
-
-const Input = ({ value, onChange, placeholder, className = '' }) => (
-  <input value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-    className={`w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white ${className}`} />
-);
-
-const Textarea = ({ value, onChange, placeholder, rows = 2 }) => (
-  <textarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white resize-none" />
-);
+const toChips = v => Array.isArray(v) ? v : (v ? v.split('\n').filter(Boolean) : []);
+const fromChips = arr => arr;
 
 export const YearPage = () => {
   const { yearData, loading, loadYear, updateField, updateTheme, updateTarget } = useYearStore();
-
   useEffect(() => { loadYear(); }, []);
+  if (loading || !yearData) return <Spinner />;
 
-  if (loading || !yearData) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-    </div>
-  );
+  const targets = {
+    build:{goal:'',metric:'',by:''},learn:{goal:'',metric:'',by:''},
+    operate:{goal:'',metric:'',by:''},live:{goal:'',metric:'',by:''},
+    ...(yearData.targets||{})
+  };
+  const themes = (yearData.themes?.length ? yearData.themes : [{theme:'',why:'',lookLike:'',notThisYear:''}])
+    .map(t=>({theme:'',why:'',lookLike:'',notThisYear:'',...t}));
 
-  // Safely merge stored data with defaults — handles old/incomplete records
-  const targets = { ...DEFAULT_TARGETS, ...(yearData.targets || {}) };
-  const themes  = (yearData.themes?.length ? yearData.themes : DEFAULT_THEMES).map(t => ({
-    theme: '', why: '', lookLike: '', notThisYear: '', ...t,
-  }));
+  const antiGoals      = toChips(yearData.antiGoals);
+  const yearEndOutcome = toChips(yearData.yearEndOutcome);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1e3a5f]">{yearData.year} — Year Plan</h1>
-          <p className="text-sm text-slate-400">Vision · Themes · Targets</p>
-        </div>
-        <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full">Year View</span>
-      </div>
+    <div style={{ maxWidth:760, margin:'0 auto', display:'flex', flexDirection:'column', gap:24 }}>
+      <PageHeader title={`${yearData.year} — Year Plan`} subtitle="Vision, themes, and annual targets" />
 
       {/* Identity */}
-      <PlannerCard title="Identity Statement" subtitle="Who are you becoming this year?">
-        <Textarea value={yearData.identityStatement}
+      <Section title="Identity Statement" hint="Who are you becoming this year?">
+        <AutoTextarea value={yearData.identityStatement}
           onChange={v => updateField('identityStatement', v)}
-          placeholder="I am a founder who ships fast, learns deliberately, and protects my health..."
-          rows={3} />
-      </PlannerCard>
+          placeholder="I am becoming someone who..." minRows={2} />
+      </Section>
 
       {/* Themes */}
-      <PlannerCard title="Annual Themes" subtitle="Max 3 themes — the filters for every decision">
-        <div className="flex flex-col gap-3">
-          {themes.map((t, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Theme {i + 1}</label>
-                <Input value={t.theme} onChange={v => updateTheme(i, 'theme', v)} placeholder="e.g. Deep Work" />
+      <Section title="Annual Themes" hint="The filters for every decision this year"
+        action={<button className="btn btn-primary" onClick={()=>updateField('themes',[...themes,{theme:'',why:'',lookLike:'',notThisYear:''}])}>+ Theme</button>}>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {themes.map((t,i) => (
+            <div key={i} className="card-inner">
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                <input value={t.theme} onChange={e=>updateTheme(i,'theme',e.target.value)}
+                  placeholder={`Theme ${i+1} name`}
+                  style={{ background:'transparent', border:'none', outline:'none',
+                    color:'var(--text-primary)', fontSize:15, fontWeight:600, flex:1 }} />
+                {themes.length > 1 && (
+                  <button className="btn-remove" onClick={()=>updateField('themes',themes.filter((_,j)=>j!==i))}>×</button>
+                )}
               </div>
-              <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Why it matters</label>
-                <Input value={t.why} onChange={v => updateTheme(i, 'why', v)} placeholder="Because..." />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <Field label="Why it matters">
+                  <AutoTextarea value={t.why} onChange={v=>updateTheme(i,'why',v)} placeholder="Because..." />
+                </Field>
+                <Field label="Looks like in practice">
+                  <AutoTextarea value={t.lookLike} onChange={v=>updateTheme(i,'lookLike',v)} placeholder="I will..." />
+                </Field>
               </div>
-              <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Looks like</label>
-                <Input value={t.lookLike} onChange={v => updateTheme(i, 'lookLike', v)} placeholder="In practice..." />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 font-semibold block mb-1">Not this year</label>
-                <Input value={t.notThisYear} onChange={v => updateTheme(i, 'notThisYear', v)} placeholder="Won't do..." />
+              <div style={{ marginTop:12 }}>
+                <Field label="Not this year">
+                  <FpInput value={t.notThisYear} onChange={v=>updateTheme(i,'notThisYear',v)} placeholder="Excluded by this theme..." />
+                </Field>
               </div>
             </div>
           ))}
         </div>
-      </PlannerCard>
+      </Section>
 
       {/* Targets */}
-      <PlannerCard title="Annual Targets" subtitle="One meaningful goal per bucket">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {BUCKETS.map(b => {
-            const c = getBucketColor(BUCKET_LABELS[b]);
-            const t = { goal: '', metric: '', by: '', ...(targets[b] || {}) };
+      <Section title="Annual Targets" hint="One meaningful goal per life area"
+        action={
+          <button className="btn btn-primary" onClick={()=>{
+            const k=`custom_${Date.now()}`;
+            updateField('targets',{...targets,[k]:{label:'Custom',goal:'',metric:'',by:''}});
+          }}>+ Target</button>
+        }>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {Object.entries(targets).map(([key,t]) => {
+            const c = BUCKET_CONFIG[key] || BUCKET_CONFIG.build;
+            const label = t.label || c.label;
+            const isCore = ['build','learn','operate','live'].includes(key);
             return (
-              <div key={b} className="p-3 rounded-xl border border-slate-200 bg-white">
-                <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold mb-3 ${c.bg} ${c.text}`}>
-                  {BUCKET_LABELS[b]}
+              <div key={key} className="card-inner">
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:c.dot, flexShrink:0 }} />
+                  {isCore
+                    ? <span className={`tag ${c.tagClass}`}>{label}</span>
+                    : <input value={label} onChange={e=>updateTarget(key,'label',e.target.value)}
+                        style={{ background:'transparent', border:'none', outline:'none',
+                          color:'var(--accent-amber)', fontSize:12, fontWeight:600, width:120 }} />
+                  }
+                  <button className="btn-remove" style={{ marginLeft:'auto' }}
+                    onClick={()=>{ const n={...targets}; delete n[key]; updateField('targets',n); }}>×</button>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Input value={t.goal}   onChange={v => updateTarget(b, 'goal',   v)} placeholder="Goal" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input value={t.metric} onChange={v => updateTarget(b, 'metric', v)} placeholder="Success metric" />
-                    <Input value={t.by}     onChange={v => updateTarget(b, 'by',     v)} placeholder="By when" />
-                  </div>
+                <AutoTextarea value={t.goal} onChange={v=>updateTarget(key,'goal',v)} placeholder="Goal for the year..." minRows={1} />
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:10 }}>
+                  <FpInput value={t.metric||''} onChange={v=>updateTarget(key,'metric',v)} placeholder="Success metric" />
+                  <FpInput value={t.by||''}     onChange={v=>updateTarget(key,'by',v)}     placeholder="By when" />
                 </div>
               </div>
             );
           })}
         </div>
-      </PlannerCard>
+      </Section>
 
-      {/* Year-end + Anti-goals */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PlannerCard title="Year-End Outcome" subtitle="The one result that defines success">
-          <Textarea value={yearData.yearEndOutcome}
-            onChange={v => updateField('yearEndOutcome', v)}
-            placeholder="At the end of this year I will have..." rows={4} />
-        </PlannerCard>
-        <PlannerCard title="Anti-Goals" subtitle="What you are explicitly NOT doing">
-          <Textarea value={yearData.antiGoals}
-            onChange={v => updateField('antiGoals', v)}
-            placeholder="Not this year: no new side projects, no freelance clients..." rows={4} />
-        </PlannerCard>
+      {/* Year-end outcomes + Anti-goals as chip lists */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <Section title="Year-End Outcomes" hint="Results that define success — press Enter to add">
+          <ChipList items={yearEndOutcome}
+            onChange={v=>updateField('yearEndOutcome', fromChips(v))}
+            placeholder="At year-end I will have..." />
+        </Section>
+        <Section title="Anti-Goals" hint="What you are NOT doing this year — press Enter to add">
+          <ChipList items={antiGoals}
+            onChange={v=>updateField('antiGoals', fromChips(v))}
+            placeholder="Not this year..." />
+        </Section>
       </div>
-
     </div>
   );
 };
+
+const Spinner = () => (
+  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200 }}>
+    <div style={{ width:24, height:24, border:'2px solid var(--border-strong)', borderTopColor:'var(--accent-blue)', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+  </div>
+);
+const PageHeader = ({ title, subtitle }) => (
+  <div><h1 className="page-title">{title}</h1>{subtitle&&<p className="page-subtitle">{subtitle}</p>}</div>
+);
+const Section = ({ title, hint, children, action }) => (
+  <div className="card">
+    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:16 }}>
+      <div>
+        <p className="section-title">{title}</p>
+        {hint&&<p className="helper-text" style={{ marginTop:4 }}>{hint}</p>}
+      </div>
+      {action&&<div>{action}</div>}
+    </div>
+    {children}
+  </div>
+);
+const Field = ({ label, children }) => (
+  <div><label className="field-label">{label}</label>{children}</div>
+);
