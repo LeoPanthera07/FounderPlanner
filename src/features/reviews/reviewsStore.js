@@ -1,39 +1,43 @@
-import { create } from 'zustand';
-import { db } from '../../data/db/plannerDB';
-import { getTodayString } from '../../utils/dateUtils';
+﻿import { create } from "zustand";
+import { db } from "../../data/db/plannerDB";
+
+const getWeekKey = () => {
+  const now = new Date();
+  const jan1 = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  return `${now.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const getMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-M${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+const EMPTY = { win:"", drift:"", forward:"", stop:"", start:"", continue:"", lesson:"", nextFocus:"" };
+
+let _t = null;
+const dsave = (id, data) => { clearTimeout(_t); _t = setTimeout(() => db.reviews.update(id, data), 600); };
 
 export const useReviewsStore = create((set, get) => ({
-  reviews: [],
-  currentReview: null,
+  review: null,
   loading: false,
 
-  loadReviews: async (type) => {
-    set({ loading: true });
-    const reviews = await db.reviews.where('type').equals(type).sortBy('period');
-    set({ reviews, loading: false });
-  },
-
-  loadReview: async (type, period) => {
-    let review = await db.reviews
-      .where('type').equals(type).and((r) => r.period === period).first();
-    if (!review) {
-      review = { type, period, data: {}, createdAt: getTodayString() };
-      review.id = await db.reviews.add(review);
+  loadReview: async (type = "weekly") => {
+    set({ loading: true, review: null });
+    const period = type === "weekly" ? getWeekKey() : getMonthKey();
+    let data;
+    try { data = await db.reviews.filter(r => r.type === type && r.period === period).first(); } catch(e) { data = null; }
+    if (!data) {
+      const nd = { ...EMPTY, type, period };
+      const id = await db.reviews.add(nd);
+      data = { ...nd, id };
     }
-    set({ currentReview: review });
+    set({ review: data, loading: false });
   },
 
-  updateReviewData: async (key, value) => {
-    const { currentReview } = get();
-    if (!currentReview) return;
-    const data = { ...currentReview.data, [key]: value };
-    await db.reviews.update(currentReview.id, { data });
-    set({ currentReview: { ...currentReview, data } });
-  },
-
-  deleteReview: async (id) => {
-    await db.reviews.delete(id);
-    const { reviews } = get();
-    set({ reviews: reviews.filter((r) => r.id !== id) });
+  updateField: (field, value) => {
+    const { review } = get();
+    if (!review) return;
+    const updated = { ...review, [field]: value };
+    set({ review: updated });
+    dsave(review.id, { [field]: value });
   },
 }));

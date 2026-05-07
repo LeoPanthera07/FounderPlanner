@@ -1,47 +1,108 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const NAV = [
-  { to:'/year',    icon:'🎯', label:'Year'    },
-  { to:'/month',   icon:'📅', label:'Month'   },
-  { to:'/week',    icon:'📋', label:'Week'    },
-  { to:'/day',     icon:'⚡', label:'Day'     },
-  { to:'/habits',  icon:'🔥', label:'Habits'  },
-  { to:'/metrics', icon:'📊', label:'Metrics' },
-  { to:'/reviews', icon:'🔄', label:'Reviews' },
+  { path:"/day",     label:"Daily Command", emoji:"⚡" },
+  { path:"/week",    label:"Week",          emoji:"📋" },
+  { path:"/month",   label:"Month",         emoji:"📆" },
+  { path:"/year",    label:"Year",          emoji:"🎯" },
+  { path:"/reviews", label:"Reviews",       emoji:"🔄" },
+  { path:"/metrics", label:"Metrics",       emoji:"📊" },
+  { path:"/habits",  label:"Habits",        emoji:"🔥" },
 ];
 
-export const Sidebar = ({ open, onClose }) => (
-  <>
-    {open && <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:20 }} onClick={onClose} />}
-    <aside style={{
-      position: window.innerWidth >= 1024 ? 'sticky' : 'fixed',
-      top: 0, left: 0, height: '100vh', width: 200,
-      background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)',
-      display: 'flex', flexDirection: 'column', zIndex: 30, flexShrink: 0,
-      transform: open || window.innerWidth >= 1024 ? 'translateX(0)' : 'translateX(-100%)',
-      transition: 'transform 0.25s ease',
+export const Sidebar = ({ open, onClose }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const go = (path) => { navigate(path); if (onClose) onClose(); };
+
+  return (
+    <div style={{
+      width: collapsed ? 58 : 220,
+      minWidth: collapsed ? 58 : 220,
+      height: "100vh",
+      background: "var(--bg-surface)",
+      borderRight: "1px solid var(--border-subtle)",
+      display: "flex", flexDirection: "column",
+      transition: "width 0.2s ease, min-width 0.2s ease",
+      overflow: "hidden", flexShrink: 0,
     }}>
-      <div style={{ padding:'16px 14px 14px', borderBottom:'1px solid var(--border-subtle)' }}>
-        <p style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }}>Founder Planner</p>
-        <p style={{ fontSize:11, color:'var(--text-disabled)', marginTop:2 }}>
-          {new Date().getFullYear()}
-        </p>
+      <div style={{
+        display: "flex", alignItems: "center",
+        justifyContent: collapsed ? "center" : "space-between",
+        padding: collapsed ? "14px 0" : "14px 14px",
+        borderBottom: "1px solid var(--border-subtle)",
+        minHeight: 56, gap: 8,
+      }}>
+        {!collapsed && (
+          <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+            <div style={{
+              width:30, height:30, borderRadius:8,
+              background:"var(--accent-blue)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:16, fontWeight:800, color:"#fff",
+            }}>F</div>
+            <span style={{ fontSize:15, fontWeight:700, color:"var(--text-primary)", letterSpacing:"-0.3px" }}>
+              Founder
+            </span>
+          </div>
+        )}
+        {collapsed && (
+          <div style={{
+            width:30, height:30, borderRadius:8,
+            background:"var(--accent-blue)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:16, fontWeight:800, color:"#fff",
+          }}>F</div>
+        )}
+        <button onClick={() => setCollapsed(c => !c)} style={{
+          width:26, height:26, borderRadius:6, flexShrink:0,
+          background:"transparent", border:"1px solid var(--border-default)",
+          color:"var(--text-muted)", cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:12, lineHeight:1, fontFamily:"Inter, sans-serif",
+        }}>{collapsed ? ">" : "<"}</button>
       </div>
-      <nav style={{ flex:1, padding:'8px 8px', display:'flex', flexDirection:'column', gap:2, overflowY:'auto' }}>
-        {NAV.map(({ to, icon, label }) => (
-          <NavLink key={to} to={to} onClick={onClose}
-            className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
-            <span style={{ fontSize:15, width:18, textAlign:'center', flexShrink:0 }}>{icon}</span>
-            <span>{label}</span>
-          </NavLink>
-        ))}
+
+      <nav style={{ flex:1, padding:"10px 8px", display:"flex", flexDirection:"column", gap:2 }}>
+        {NAV.map(item => {
+          const active = location.pathname === item.path ||
+                         (item.path === "/day" && location.pathname === "/");
+          return (
+            <button key={item.path}
+              onClick={() => go(item.path)}
+              title={collapsed ? item.label : ""}
+              style={{
+                display:"flex", alignItems:"center",
+                gap: collapsed ? 0 : 10,
+                justifyContent: collapsed ? "center" : "flex-start",
+                padding: collapsed ? "10px 0" : "10px 12px",
+                width:"100%", borderRadius:8,
+                border:"1px solid " + (active ? "var(--border-default)" : "transparent"),
+                background: active ? "var(--bg-active)" : "transparent",
+                color: active ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize:14, fontWeight: active ? 600 : 400,
+                fontFamily:"Inter, sans-serif",
+                cursor:"pointer", transition:"all 0.12s",
+                textAlign:"left", whiteSpace:"nowrap",
+              }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.background="var(--bg-elevated)"; e.currentTarget.style.color="var(--text-secondary)"; }}}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--text-muted)"; }}}
+            >
+              <span style={{ fontSize:17, flexShrink:0, lineHeight:1, width:22, textAlign:"center" }}>{item.emoji}</span>
+              {!collapsed && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.label}</span>}
+            </button>
+          );
+        })}
       </nav>
-      <div style={{ padding:'12px 14px', borderTop:'1px solid var(--border-subtle)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:24, height:24, borderRadius:6, background:'var(--accent-blue-bg)', border:'1px solid rgba(79,142,247,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--accent-blue)' }}>F</div>
-          <span style={{ fontSize:11, color:'var(--text-disabled)' }}>Founder Mode</span>
+
+      {!collapsed && (
+        <div style={{ padding:"12px 14px", borderTop:"1px solid var(--border-subtle)" }}>
+          <p style={{ fontSize:11, color:"var(--text-disabled)", fontFamily:"Inter, sans-serif" }}>Founder Planner v1</p>
         </div>
-      </div>
-    </aside>
-  </>
-);
+      )}
+    </div>
+  );
+};

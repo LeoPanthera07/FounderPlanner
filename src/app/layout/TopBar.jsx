@@ -1,27 +1,37 @@
-import { useLocation } from 'react-router-dom';
-import { getTodayString, formatDate } from '../../utils/dateUtils';
+import { useLocation } from "react-router-dom";
+import { getTodayString, formatDate } from "../../utils/dateUtils";
 
 const META = {
-  '/year':    { title:'Year Plan',      icon:'🎯' },
-  '/month':   { title:'Month Plan',     icon:'📅' },
-  '/week':    { title:'Week Plan',      icon:'📋' },
-  '/day':     { title:'Daily Command',  icon:'⚡' },
-  '/habits':  { title:'Habits',         icon:'🔥' },
-  '/metrics': { title:'Metrics',        icon:'📊' },
-  '/reviews': { title:'Reviews',        icon:'🔄' },
+  "/year":    { title:"Year Plan",     emoji:"🎯" },
+  "/month":   { title:"Month Plan",    emoji:"📆"   },
+  "/week":    { title:"Week Plan",     emoji:"📋"   },
+  "/day":     { title:"Daily Command", emoji:"⚡"   },
+  "/habits":  { title:"Habits",        emoji:"🔥"   },
+  "/metrics": { title:"Metrics",       emoji:"📊"  },
+  "/reviews": { title:"Reviews",       emoji:"🔄" },
 };
 
 export const TopBar = ({ onMenuClick }) => {
   const { pathname } = useLocation();
-  const m = META[pathname] || { title:'Planner', icon:'📌' };
+  const m = META[pathname] || { title:"Planner", emoji:"F" };
+
   return (
-    <header style={{ height:48, background:'var(--bg-surface)', borderBottom:'1px solid var(--border-subtle)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 20px', flexShrink:0 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <button onClick={onMenuClick} className="btn btn-ghost" style={{ display:'none' }}>☰</button>
-        <span style={{ fontSize:16 }}>{m.icon}</span>
-        <span style={{ fontSize:14, fontWeight:500, color:'var(--text-primary)' }}>{m.title}</span>
+    <header style={{
+      height:52, background:"var(--bg-surface)",
+      borderBottom:"1px solid var(--border-subtle)",
+      display:"flex", alignItems:"center",
+      justifyContent:"space-between",
+      padding:"0 28px", flexShrink:0,
+    }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <span style={{ fontSize:20, lineHeight:1 }}>{m.emoji}</span>
+        <span style={{ fontSize:16, fontWeight:600, color:"var(--text-primary)", fontFamily:"Inter, sans-serif", letterSpacing:"-0.2px" }}>
+          {m.title}
+        </span>
       </div>
-      <span style={{ fontSize:12, color:'var(--text-disabled)' }}>{formatDate(getTodayString())}</span>
+      <span style={{ fontSize:12, color:"var(--text-disabled)", fontFamily:"Inter, sans-serif" }}>
+        {formatDate(getTodayString())}
+      </span>
     </header>
   );
 };
