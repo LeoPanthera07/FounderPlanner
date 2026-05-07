@@ -1,66 +1,71 @@
 import { create } from 'zustand';
 import { db } from '../../data/db/plannerDB';
-import { yearDefaults } from '../../data/defaults/yearDefaults';
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+const DEFAULT_YEAR_DATA = {
+  year: CURRENT_YEAR,
+  identityStatement: '',
+  themes: [
+    { theme: '', why: '', lookLike: '', notThisYear: '' },
+    { theme: '', why: '', lookLike: '', notThisYear: '' },
+    { theme: '', why: '', lookLike: '', notThisYear: '' },
+  ],
+  targets: {
+    build:   { goal: '', metric: '', by: '' },
+    learn:   { goal: '', metric: '', by: '' },
+    operate: { goal: '', metric: '', by: '' },
+    live:    { goal: '', metric: '', by: '' },
+  },
+  yearEndOutcome: '',
+  notThisYear: '',
+  antiGoals: '',
+};
+
+let _saveTimer = null;
+const debounceSave = (id, data) => {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    db.yearData.update(id, data);
+  }, 600);
+};
 
 export const useYearStore = create((set, get) => ({
   yearData: null,
   loading: false,
-  error: null,
 
-  loadYear: async (year = new Date().getFullYear()) => {
+  loadYear: async (year = CURRENT_YEAR) => {
     set({ loading: true });
-    try {
-      let data = await db.yearData.where('year').equals(year).first();
-      if (!data) {
-        data = yearDefaults();
-        data.id = await db.yearData.add(data);
-      }
-      set({ yearData: data, loading: false });
-    } catch (e) {
-      set({ error: e.message, loading: false });
+    let data = await db.yearData.where('year').equals(year).first();
+    if (!data) {
+      const newData = { ...DEFAULT_YEAR_DATA, year };
+      const id = await db.yearData.add(newData);
+      data = { ...newData, id };
     }
+    set({ yearData: data, loading: false });
   },
 
-  updateField: async (field, value) => {
+  updateField: (field, value) => {
     const { yearData } = get();
     if (!yearData) return;
     const updated = { ...yearData, [field]: value };
-    await db.yearData.update(yearData.id, { [field]: value });
     set({ yearData: updated });
+    debounceSave(yearData.id, { [field]: value });
   },
 
-  updateTarget: async (area, key, value) => {
+  updateTheme: (index, field, value) => {
     const { yearData } = get();
-    const updated = {
-      ...yearData,
-      annualTargets: {
-        ...yearData.annualTargets,
-        [area]: { ...yearData.annualTargets[area], [key]: value },
-      },
-    };
-    await db.yearData.update(yearData.id, { annualTargets: updated.annualTargets });
-    set({ yearData: updated });
+    if (!yearData) return;
+    const themes = yearData.themes.map((t, i) => i === index ? { ...t, [field]: value } : t);
+    set({ yearData: { ...yearData, themes } });
+    debounceSave(yearData.id, { themes });
   },
 
-  updateOutcome: async (index, key, value) => {
+  updateTarget: (bucket, field, value) => {
     const { yearData } = get();
-    const outcomes = [...yearData.yearEndOutcomes];
-    outcomes[index] = { ...outcomes[index], [key]: value };
-    await db.yearData.update(yearData.id, { yearEndOutcomes: outcomes });
-    set({ yearData: { ...yearData, yearEndOutcomes: outcomes } });
-  },
-
-  addNotThisYear: async (item) => {
-    const { yearData } = get();
-    const list = [...yearData.notThisYear, item];
-    await db.yearData.update(yearData.id, { notThisYear: list });
-    set({ yearData: { ...yearData, notThisYear: list } });
-  },
-
-  removeNotThisYear: async (index) => {
-    const { yearData } = get();
-    const list = yearData.notThisYear.filter((_, i) => i !== index);
-    await db.yearData.update(yearData.id, { notThisYear: list });
-    set({ yearData: { ...yearData, notThisYear: list } });
+    if (!yearData) return;
+    const targets = { ...yearData.targets, [bucket]: { ...yearData.targets[bucket], [field]: value } };
+    set({ yearData: { ...yearData, targets } });
+    debounceSave(yearData.id, { targets });
   },
 }));

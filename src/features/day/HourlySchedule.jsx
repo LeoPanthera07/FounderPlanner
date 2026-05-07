@@ -23,10 +23,11 @@ const EMPTY_BLOCK = {
 };
 
 const RATING_LABELS = ['—', '😞', '😐', '🙂', '😊', '🌟'];
-const HOUR_HEIGHT   = 64;
-const DAY_START     = 5;
-const DAY_END       = 23;
-const TOTAL_HOURS   = DAY_END - DAY_START;
+
+const HOUR_HEIGHT = 56;
+const DAY_START   = 0;
+const DAY_END     = 24;
+const TOTAL_HOURS = DAY_END - DAY_START;
 
 const isValidTime = (t) => typeof t === 'string' && /^\d{2}:\d{2}$/.test(t);
 
@@ -45,39 +46,73 @@ const duration = (start, end) => {
   return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 };
 
+const fmt12 = (t) => {
+  if (!isValidTime(t)) return t;
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12  = h % 12 || 12;
+  return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+};
+
 const blockTop = (startTime) => {
   if (!isValidTime(startTime)) return 0;
-  const mins = timeToMin(startTime) - DAY_START * 60;
-  return Math.max(0, (mins / 60) * HOUR_HEIGHT);
+  return Math.max(0, (timeToMin(startTime) / 60) * HOUR_HEIGHT);
 };
 
 const blockHeight = (startTime, endTime) => {
   if (!isValidTime(startTime) || !isValidTime(endTime)) return 40;
   const diff = timeToMin(endTime) - timeToMin(startTime);
-  return Math.max((diff / 60) * HOUR_HEIGHT, 32);
+  return Math.max((diff / 60) * HOUR_HEIGHT, 36);
 };
 
 const sanitizeBlock = (b) => ({
-  ...EMPTY_BLOCK,
-  ...b,
+  ...EMPTY_BLOCK, ...b,
   startTime: isValidTime(b?.startTime) ? b.startTime : '09:00',
   endTime:   isValidTime(b?.endTime)   ? b.endTime   : '10:00',
   id:        b?.id ?? Date.now() + Math.random(),
 });
 
-export const HourlySchedule = ({ schedule = [], onUpdate }) => {
-  const safeBlocks = (Array.isArray(schedule) ? schedule : []).map(sanitizeBlock);
+// Extract bg color from tailwind class string for consistent theming
+const getBgOnly = (colorClass) => {
+  const bg = colorClass?.split(' ').find(c => c.startsWith('bg-'));
+  return bg || 'bg-blue-600';
+};
 
-  const [blocks, setBlocks]       = useState(safeBlocks);
-  const [editing, setEditing]     = useState(null);
-  const [showForm, setShowForm]   = useState(false);
-  const [form, setForm]           = useState({ ...EMPTY_BLOCK });
+// Lighter tinted background for expanded panel — same hue, white tint
+const PANEL_TINTS = {
+  'bg-blue-600':   'bg-blue-50  border-blue-200',
+  'bg-teal-600':   'bg-teal-50  border-teal-200',
+  'bg-amber-500':  'bg-amber-50 border-amber-200',
+  'bg-slate-400':  'bg-slate-50 border-slate-200',
+  'bg-purple-400': 'bg-purple-50 border-purple-200',
+  'bg-orange-400': 'bg-orange-50 border-orange-200',
+  'bg-red-400':    'bg-red-50   border-red-200',
+  'bg-green-400':  'bg-green-50 border-green-200',
+  'bg-green-600':  'bg-green-50 border-green-200',
+  'bg-slate-600':  'bg-slate-50 border-slate-200',
+  'bg-yellow-400': 'bg-yellow-50 border-yellow-200',
+  'bg-indigo-400': 'bg-indigo-50 border-indigo-200',
+};
+
+const getPanelTint = (modeColor) => {
+  const bg = getBgOnly(modeColor);
+  return PANEL_TINTS[bg] || 'bg-slate-50 border-slate-200';
+};
+
+export const HourlySchedule = ({ schedule = [], onUpdate }) => {
+  const safeBlocks = (Array.isArray(schedule) ? schedule : [])
+    .filter(b => b && b.name && b.name.trim() !== '')
+    .map(sanitizeBlock);
+
+  const [blocks, setBlocks]           = useState(safeBlocks);
+  const [editing, setEditing]         = useState(null);
+  const [showForm, setShowForm]       = useState(false);
+  const [form, setForm]               = useState({ ...EMPTY_BLOCK });
   const [showPresets, setShowPresets] = useState(false);
 
   const save = (updated) => {
-    const sorted = [...updated]
-      .filter(b => isValidTime(b.startTime))
-      .sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+    const clean  = updated.filter(b => b && b.name && b.name.trim() !== '');
+    const sorted = [...clean].sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
     setBlocks(sorted);
     onUpdate(sorted);
   };
@@ -90,12 +125,21 @@ export const HourlySchedule = ({ schedule = [], onUpdate }) => {
   };
 
   const updateBlock = (id, key, value) => {
-    save(blocks.map(b => b.id === id ? { ...b, [key]: value } : b));
+    setBlocks(prev => {
+      const updated = prev.map(b => b.id === id ? { ...b, [key]: value } : b);
+      const sorted  = [...updated].sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+      onUpdate(sorted);
+      return sorted;
+    });
   };
 
   const deleteBlock = (id) => {
-    save(blocks.filter(b => b.id !== id));
-    if (editing === id) setEditing(null);
+    setBlocks(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      onUpdate(updated);
+      return updated;
+    });
+    setEditing(null);
   };
 
   const loadPreset = () => {
@@ -104,7 +148,7 @@ export const HourlySchedule = ({ schedule = [], onUpdate }) => {
     setShowPresets(false);
   };
 
-  const hours = Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => DAY_START + i);
+  const hours     = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
   const completed = blocks.filter(b => b.done).length;
 
   return (
@@ -214,147 +258,191 @@ export const HourlySchedule = ({ schedule = [], onUpdate }) => {
           <p className="text-sm mt-1">Add a block above or load the default routine template</p>
         </div>
       ) : (
-        <div className="relative flex gap-0 overflow-x-auto">
-          {/* Hour labels */}
-          <div className="flex-shrink-0 w-14 relative select-none"
-            style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
-            {hours.map(h => (
-              <div key={h} className="absolute w-full flex items-start justify-end pr-2"
-                style={{ top: `${(h - DAY_START) * HOUR_HEIGHT}px` }}>
-                <span className="text-xs text-slate-300 font-mono -mt-2 leading-none">
-                  {String(h % 24).padStart(2, '0')}:00
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="border border-slate-100 rounded-xl overflow-hidden">
+          <div className="overflow-y-auto" style={{ maxHeight: '640px' }}>
+            <div className="relative flex">
 
-          {/* Grid + blocks */}
-          <div className="flex-1 relative min-w-0"
-            style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
-            {/* Hour lines */}
-            {hours.map(h => (
-              <div key={h} className="absolute w-full border-t border-slate-100"
-                style={{ top: `${(h - DAY_START) * HOUR_HEIGHT}px` }} />
-            ))}
-            {/* Half-hour dashed lines */}
-            {hours.slice(0, -1).map(h => (
-              <div key={`d-${h}`} className="absolute w-full border-t border-dashed border-slate-50"
-                style={{ top: `${(h - DAY_START) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }} />
-            ))}
-
-            {/* Blocks */}
-            {blocks.map((block) => {
-              const top    = blockTop(block.startTime);
-              const height = blockHeight(block.startTime, block.endTime);
-              const isOpen = editing === block.id;
-              const modeColor = BLOCK_MODE_COLORS[block.mode] || 'bg-blue-500 text-white';
-
-              return (
-                <div key={block.id}
-                  className={`absolute left-1 right-1 rounded-lg overflow-hidden shadow-sm border transition-all
-                    ${block.done ? 'opacity-60 border-green-200' : 'border-white/50 hover:shadow-md'}
-                    ${isOpen ? 'z-20 ring-2 ring-blue-400' : 'z-10'}`}
-                  style={{ top: `${top}px`, minHeight: `${height}px` }}>
-
-                  {/* Block header */}
-                  <div className={`${modeColor} px-2 py-1.5 flex items-center gap-2 cursor-pointer`}
-                    onClick={() => setEditing(isOpen ? null : block.id)}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); updateBlock(block.id, 'done', !block.done); }}
-                      className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs transition
-                        ${block.done ? 'bg-white/30 border-white text-white' : 'border-white/60 text-transparent hover:bg-white/20'}`}>
-                      ✓
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-semibold truncate leading-tight ${block.done ? 'line-through opacity-70' : ''}`}>
-                        {block.name || 'Untitled Block'}
-                      </p>
-                      <p className="text-xs opacity-70 leading-tight">
-                        {block.startTime} – {block.endTime}
-                        {duration(block.startTime, block.endTime) && ` · ${duration(block.startTime, block.endTime)}`}
-                      </p>
-                    </div>
-                    {block.rating > 0 && (
-                      <span className="text-sm flex-shrink-0">{RATING_LABELS[block.rating]}</span>
-                    )}
-                    <span className="text-xs opacity-50 flex-shrink-0">{isOpen ? '▲' : '▼'}</span>
+              {/* Hour labels */}
+              <div className="flex-shrink-0 w-16 bg-white z-10"
+                style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+                {hours.map(h => (
+                  <div key={h} className="absolute w-16 flex items-start justify-end pr-3"
+                    style={{ top: `${h * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
+                    <span className="text-[11px] font-medium text-slate-300 leading-none pt-1.5 select-none">
+                      {fmt12(`${String(h).padStart(2,'0')}:00`)}
+                    </span>
                   </div>
+                ))}
+              </div>
 
-                  {/* Expanded edit panel */}
-                  {isOpen && (
-                    <div className="bg-white p-3 flex flex-col gap-2 border-t border-slate-100">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-slate-400 font-semibold block mb-1">Name</label>
-                          <input value={block.name}
-                            onChange={(e) => updateBlock(block.id, 'name', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-400 font-semibold block mb-1">Mode</label>
-                          <select value={block.mode}
-                            onChange={(e) => updateBlock(block.id, 'mode', e.target.value)}
-                            className={`w-full px-2 py-1.5 text-xs rounded-lg border-0 font-semibold focus:outline-none ${BLOCK_MODE_COLORS[block.mode] || 'bg-slate-100'}`}>
-                            {BLOCK_MODES.map(m => <option key={m}>{m}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-slate-400 font-semibold block mb-1">Start</label>
-                          <input type="time" value={block.startTime}
-                            onChange={(e) => updateBlock(block.id, 'startTime', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-400 font-semibold block mb-1">End</label>
-                          <input type="time" value={block.endTime}
-                            onChange={(e) => updateBlock(block.id, 'endTime', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-400 font-semibold block mb-1">Exact Intent</label>
-                        <input value={block.intent}
-                          onChange={(e) => updateBlock(block.id, 'intent', e.target.value)}
-                          placeholder="What exactly will you accomplish?"
-                          className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400" />
-                      </div>
-                      {block.done && (
-                        <div>
-                          <label className="text-xs text-slate-400 font-semibold block mb-2">Rate this block</label>
-                          <div className="flex gap-3">
-                            {RATING_LABELS.slice(1).map((emoji, i) => (
-                              <button key={i}
-                                onClick={() => updateBlock(block.id, 'rating', i + 1)}
-                                className={`text-xl transition-transform hover:scale-125 ${block.rating === i + 1 ? 'scale-125' : 'opacity-40'}`}>
-                                {emoji}
-                              </button>
-                            ))}
+              {/* Grid */}
+              <div className="flex-1 relative border-l border-slate-100"
+                style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+                {hours.map(h => (
+                  <div key={h} className="absolute w-full border-t border-slate-100"
+                    style={{ top: `${h * HOUR_HEIGHT}px` }} />
+                ))}
+                {hours.map(h => (
+                  <div key={`d-${h}`} className="absolute w-full border-t border-dashed border-slate-50"
+                    style={{ top: `${h * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }} />
+                ))}
+
+                {/* Blocks */}
+                {blocks.map((block) => {
+                  const top        = blockTop(block.startTime);
+                  const height     = blockHeight(block.startTime, block.endTime);
+                  const isOpen     = editing === block.id;
+                  const modeColor  = BLOCK_MODE_COLORS[block.mode] || 'bg-blue-600 text-white';
+                  const panelTint  = getPanelTint(modeColor);
+
+                  return (
+                    <div key={block.id}
+                      className={`absolute left-1 right-1 rounded-lg overflow-visible transition-all
+                        ${isOpen ? 'z-20 shadow-xl' : 'z-10 shadow-sm hover:shadow-md'}`}
+                      style={{ top: `${top}px`, minHeight: `${height}px` }}>
+
+                      {/* ── Collapsed block: full color, no white ── */}
+                      {!isOpen && (
+                        <div
+                          className={`${modeColor} rounded-lg px-2.5 py-1.5 h-full flex flex-col justify-between cursor-pointer select-none
+                            ${block.done ? 'brightness-75 saturate-50' : 'hover:brightness-110'} transition-all`}
+                          style={{ minHeight: `${height}px` }}
+                          onClick={() => setEditing(block.id)}>
+                          <div className="flex items-start gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateBlock(block.id, 'done', !block.done); }}
+                              className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-[10px] font-bold transition
+                                ${block.done ? 'bg-white/50 border-white text-white' : 'border-white/50 text-transparent hover:bg-white/20'}`}>
+                              ✓
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-1.5 flex-wrap">
+                                <p className={`text-xs font-semibold leading-tight ${block.done ? 'line-through opacity-60' : ''}`}>
+                                  {block.name}
+                                </p>
+                                {block.intent && (
+                                  <p className="text-xs opacity-60 leading-tight truncate">
+                                    — {block.intent}
+                                  </p>
+                                )}
+                              </div>
+                              <p className="text-xs opacity-60 leading-tight mt-0.5">
+                                {fmt12(block.startTime)} – {fmt12(block.endTime)}
+                                {duration(block.startTime, block.endTime) && ` · ${duration(block.startTime, block.endTime)}`}
+                              </p>
+                            </div>
+                            {block.done && block.rating > 0 && (
+                              <span className="text-sm flex-shrink-0 ml-1">{RATING_LABELS[block.rating]}</span>
+                            )}
+                            {block.done && (
+                              <span className="text-xs flex-shrink-0 opacity-70 font-semibold">✓</span>
+                            )}
                           </div>
                         </div>
                       )}
-                      <div>
-                        <label className="text-xs text-slate-400 font-semibold block mb-1">Notes</label>
-                        <textarea value={block.notes}
-                          onChange={(e) => updateBlock(block.id, 'notes', e.target.value)}
-                          rows={2} placeholder="Any notes for this block..."
-                          className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none" />
-                      </div>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="text-xs text-slate-400">
-                          Duration: <strong>{duration(block.startTime, block.endTime) || '—'}</strong>
-                        </span>
-                        <button onClick={() => deleteBlock(block.id)}
-                          className="text-xs text-red-400 hover:text-red-600 font-semibold transition">
-                          Delete block
-                        </button>
-                      </div>
+
+                      {/* ── Expanded block: same tinted bg, no white panel ── */}
+                      {isOpen && (
+                        <div className={`${panelTint} border rounded-lg flex flex-col overflow-hidden shadow-xl`}
+                          style={{ position: 'relative', zIndex: 50 }}>
+                          {/* Expanded header — full color strip */}
+                          <div className={`${modeColor} px-2.5 py-1.5 flex items-center gap-2 cursor-pointer select-none`}
+                            onClick={() => setEditing(null)}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateBlock(block.id, 'done', !block.done); }}
+                              className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold transition
+                                ${block.done ? 'bg-white/40 border-white text-white' : 'border-white/50 text-transparent hover:bg-white/20'}`}>
+                              ✓
+                            </button>
+                            <div className="flex-1 min-w-0 flex items-baseline gap-1.5 flex-wrap">
+                              <p className={`text-xs font-semibold leading-tight ${block.done ? 'line-through opacity-70' : ''}`}>
+                                {block.name || 'Untitled'}
+                              </p>
+                              {block.intent && (
+                                <p className="text-xs opacity-60 leading-tight truncate">— {block.intent}</p>
+                              )}
+                            </div>
+                            <span className="text-xs opacity-50 ml-1">▲</span>
+                          </div>
+
+                          {/* Edit fields — tinted bg matching block color */}
+                          <div className="p-3 flex flex-col gap-2.5">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-xs text-slate-500 font-semibold block mb-1">Name</label>
+                                <input value={block.name}
+                                  onChange={(e) => updateBlock(block.id, 'name', e.target.value)}
+                                  className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-500 font-semibold block mb-1">Mode</label>
+                                <select value={block.mode}
+                                  onChange={(e) => updateBlock(block.id, 'mode', e.target.value)}
+                                  className={`w-full px-2 py-1.5 text-xs rounded-lg border-0 font-semibold focus:outline-none ${BLOCK_MODE_COLORS[block.mode] || 'bg-slate-100 text-slate-700'}`}>
+                                  {BLOCK_MODES.map(m => <option key={m}>{m}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-xs text-slate-500 font-semibold block mb-1">Start</label>
+                                <input type="time" value={block.startTime}
+                                  onChange={(e) => updateBlock(block.id, 'startTime', e.target.value)}
+                                  className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-500 font-semibold block mb-1">End</label>
+                                <input type="time" value={block.endTime}
+                                  onChange={(e) => updateBlock(block.id, 'endTime', e.target.value)}
+                                  className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-500 font-semibold block mb-1">Exact Intent</label>
+                              <input value={block.intent}
+                                onChange={(e) => updateBlock(block.id, 'intent', e.target.value)}
+                                placeholder="What exactly will you accomplish?"
+                                className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white" />
+                            </div>
+                            {block.done && (
+                              <div>
+                                <label className="text-xs text-slate-500 font-semibold block mb-2">Rate this block</label>
+                                <div className="flex gap-3">
+                                  {RATING_LABELS.slice(1).map((emoji, i) => (
+                                    <button key={i}
+                                      onClick={() => updateBlock(block.id, 'rating', i + 1)}
+                                      className={`text-xl transition-transform hover:scale-125 ${block.rating === i + 1 ? 'scale-125' : 'opacity-40'}`}>
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div>
+                              <label className="text-xs text-slate-500 font-semibold block mb-1">Notes</label>
+                              <textarea value={block.notes}
+                                onChange={(e) => updateBlock(block.id, 'notes', e.target.value)}
+                                rows={2} placeholder="Any notes for this block..."
+                                className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none bg-white" />
+                            </div>
+                            <div className="flex justify-between items-center pt-1 border-t border-slate-200 mt-1">
+                              <span className="text-xs text-slate-400">
+                                Duration: <strong className="text-slate-600">{duration(block.startTime, block.endTime) || '—'}</strong>
+                              </span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
+                                className="text-xs text-red-500 hover:text-red-700 font-semibold transition px-2 py-1 rounded hover:bg-red-100">
+                                🗑 Delete block
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}

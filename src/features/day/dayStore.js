@@ -3,6 +3,13 @@ import { db } from '../../data/db/plannerDB';
 import { dayDefaults } from '../../data/defaults/dayDefaults';
 import { getTodayString } from '../../utils/dateUtils';
 
+const isValidBlock = (b) =>
+  b &&
+  typeof b.name === 'string' &&
+  b.name.trim() !== '' &&
+  typeof b.startTime === 'string' &&
+  /^\d{2}:\d{2}$/.test(b.startTime);
+
 export const useDayStore = create((set, get) => ({
   dayData: null,
   loading: false,
@@ -15,6 +22,12 @@ export const useDayStore = create((set, get) => ({
       if (!data) {
         data = dayDefaults(new Date(date));
         data.id = await db.dayData.add(data);
+      }
+      // Strip any auto-generated or nameless slots from old data
+      const cleanSchedule = (data.schedule || []).filter(isValidBlock);
+      if (cleanSchedule.length !== (data.schedule || []).length) {
+        await db.dayData.update(data.id, { schedule: cleanSchedule });
+        data = { ...data, schedule: cleanSchedule };
       }
       set({ dayData: data, loading: false });
     } catch (e) {
@@ -48,8 +61,9 @@ export const useDayStore = create((set, get) => ({
 
   updateSchedule: async (blocks) => {
     const { dayData } = get();
-    await db.dayData.update(dayData.id, { schedule: blocks });
-    set({ dayData: { ...dayData, schedule: blocks } });
+    const clean = (blocks || []).filter(isValidBlock);
+    await db.dayData.update(dayData.id, { schedule: clean });
+    set({ dayData: { ...dayData, schedule: clean } });
   },
 
   addShutdownItem: async (item) => {
